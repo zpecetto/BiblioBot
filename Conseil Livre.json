@@ -1,0 +1,183 @@
+{
+  "name": "Conseil Livre",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "20786eb8-9d95-4923-b85b-f2a5f920dbc0",
+      "name": "When chat message received",
+      "webhookId": "4216d026-e0af-4481-8465-56023aebe176"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Tu es un bibliothécaire personnel expert en Bandes Dessinées et Littérature.\nTu as accès à deux bases de données via tes outils : l'une pour les BD/Mangas/Comics, l'autre pour les Romans.\nQuand l'utilisateur te pose une question sur ses livres, utilise TOUJOURS tes outils de base de données pour vérifier les informations exactes (titre, tomes possédés, tomes manquants, statut lu/non lu) avant de répondre.\nNe devine jamais le contenu de sa collection. Sois amical, concis et réponds toujours en français"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "bbe42380-3065-40b9-bc1e-6e47e9b0fefb",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        80,
+        224
+      ],
+      "id": "7f09948c-3a0f-415d-92ac-5b482f5edc89",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "RvwibvBQtNpHngqc",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        224
+      ],
+      "id": "b3eaaeee-3f9a-402a-b4d4-953bb307763f",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Utilise cet outil pour chercher dans la collection de Romans et Livres de l'utilisateur.",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "JR0TKpyDV65nIrYH",
+          "mode": "list",
+          "cachedResultName": "Roman",
+          "cachedResultUrl": "/projects/fHV471FQlEt1MgFt/datatables/JR0TKpyDV65nIrYH"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        224
+      ],
+      "id": "e10fc852-0e0a-49a6-9f91-3032cab179df",
+      "name": "BDD Roman"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Utilise cet outil pour chercher dans la collection de Bandes Dessinées, Comics et Mangas de l'utilisateur. Tu peux chercher par titre pour voir combien d'albums il possède, a lu, ou lui manquent.",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "wSDV9Gsc0U6ie63s",
+          "mode": "list",
+          "cachedResultName": "BD",
+          "cachedResultUrl": "/projects/fHV471FQlEt1MgFt/datatables/wSDV9Gsc0U6ie63s"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1.1,
+      "position": [
+        352,
+        224
+      ],
+      "id": "a70a5852-5b9d-4508-9a90-fc8b9149b7ce",
+      "name": "BDD BD",
+      "notes": "Utilise cet outil pour chercher dans la collection de Bandes Dessinées, Comics et Mangas de l'utilisateur. Tu peux chercher par titre pour voir combien d'albums il possède, a lu, ou lui manquent."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BDD Roman": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BDD BD": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e6a84079-b9d1-472d-987b-69beda856030",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "196c70622468c4e89b9a635be78d21686bf811d1d4c3ee0dff380d732d8d61fa"
+  },
+  "id": "KI9mZiO4LndVGUgr",
+  "tags": []
+}
