@@ -1,5 +1,5 @@
 # 📚 AI-Powered Personal Librarian (n8n + Ollama + Browserless)
-n8n + Ollama + Browserless
+
 BiblioBot est un système d'automatisation complet, souverain et 100% auto-hébergé. Il permet d'extraire, synchroniser et interagir en langage naturel avec vos collections de Bandes Dessinées, Mangas, Comics (via Bubble BD) et Romans (via Gleeph).
 
 L'architecture est optimisée pour tourner de manière fluide sur un Raspberry Pi 5 (16 Go RAM), garantissant une confidentialité totale sans aucun coût d'API cloud.
