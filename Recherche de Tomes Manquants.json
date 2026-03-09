@@ -1,0 +1,95 @@
+{
+  "name": "Recherche de Tomes Manquants",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"titre\": \"a string\",\n  \"aNumber\": 123,\n  \"thisFieldAcceptsAnyType\": null,\n  \"anArray\": []\n}"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        48,
+        48
+      ],
+      "id": "f6eb069b-afaf-4e3d-b226-3a9fadc1d647",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "wSDV9Gsc0U6ie63s",
+          "mode": "list",
+          "cachedResultName": "BD",
+          "cachedResultUrl": "/projects/fHV471FQlEt1MgFt/datatables/wSDV9Gsc0U6ie63s"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        256,
+        48
+      ],
+      "id": "45041305-c7f3-480d-aff5-247cedf29ffb",
+      "name": "Get row(s)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. On récupère le titre envoyé par l'IA\nconst inputTrigger = $('When Executed by Another Workflow').first().json;\nlet recherche = (inputTrigger.titre || \"\").toLowerCase().trim();\n\n// Sécurité : On enlève les guillemets ou la ponctuation que l'IA pourrait inventer\nrecherche = recherche.replace(/[\"'.,;?!]/g, \"\").trim();\n\n// 2. On récupère TOUTES les BD depuis le nœud Get row(s) juste avant\nconst toutesLesBDs = $input.all();\n\n// Test de sécurité : Si la base ne renvoie rien\nif (toutesLesBDs.length === 0) {\n  return [{ json: { message: `Erreur interne : Je n'ai pas pu lire la base de données (0 livre trouvé).` } }];\n}\n\n// 3. Recherche de la BD\nconst resultat = toutesLesBDs.find(item => {\n  let titreBase = (item.json.titre || \"\").toLowerCase().trim();\n  // On regarde si l'un contient l'autre (ex: \"Toriko\" contient \"toriko\")\n  return titreBase.includes(recherche) || recherche.includes(titreBase);\n});\n\n// 4. On prépare la réponse\nif (resultat) {\n  const b = resultat.json;\n  const possedes = parseInt(b.albums_possedes) || 0;\n  const manquants = parseInt(b.albums_manquants) || 0;\n  const lus = parseInt(b.albums_lus) || 0;\n  \n  return [{\n    json: {\n      message: `J'ai trouvé la série \"${b.titre}\". Tu possèdes ${possedes} tomes (dont ${lus} lus) et il t'en manque ${manquants}.`,\n      found: true\n    }\n  }];\n} else {\n  return [{\n    json: {\n      message: `Désolé, je ne trouve pas de série nommée \"${recherche}\". (Info technique: j'ai cherché dans ${toutesLesBDs.length} livres de ta base).`,\n      found: false\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        48
+      ],
+      "id": "d003a654-0d0b-407c-8418-94c46404ccb3",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "fa4ffa31-5f32-4143-9d7e-3882ec906dd8",
+  "meta": {
+    "instanceId": "196c70622468c4e89b9a635be78d21686bf811d1d4c3ee0dff380d732d8d61fa"
+  },
+  "id": "Vzt1tTIyS94zL5nT",
+  "tags": []
+}
