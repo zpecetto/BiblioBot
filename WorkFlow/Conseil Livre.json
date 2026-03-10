@@ -1,0 +1,272 @@
+{
+  "name": "Conseil Livre",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "20786eb8-9d95-4923-b85b-f2a5f920dbc0",
+      "name": "When chat message received",
+      "webhookId": "4216d026-e0af-4481-8465-56023aebe176"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Tu es un bibliothécaire personnel expert en Bandes Dessinées et Littérature.\nQuand l'utilisateur te pose une question sur ses livres, utilise TOUJOURS tes outils pour vérifier les informations exactes avant de répondre. Ne devine jamais le contenu de sa collection.\nRÈGLES STRICTES :\n\nNe montre JAMAIS le nom de tes outils à l'utilisateur (ne dis jamais \"Call_StatistiquesGlobales\" ou \"Recherche_de_TomesManquants\").\n\nExécute l'outil en arrière-plan, attends de recevoir les données, puis formule une réponse 100% naturelle et conversationnelle en français.\n\nSi l'outil ne nécessite pas de paramètre, exécute le simplement sans rien dire.\nIMPORTANT : Tu ne dois JAMAIS répondre à l'utilisateur avec du texte technique comme \"Calling Call_Recherche...\". Si tu dois utiliser un outil, utilise-le de manière invisible. Ta réponse finale à l'utilisateur doit TOUJOURS être une phrase complète et naturelle en français.",
+          "maxIterations": 5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        352,
+        0
+      ],
+      "id": "bbe42380-3065-40b9-bc1e-6e47e9b0fefb",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "qwen2.5:7b",
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        224,
+        224
+      ],
+      "id": "7f09948c-3a0f-415d-92ac-5b482f5edc89",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "RvwibvBQtNpHngqc",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 2
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        352,
+        224
+      ],
+      "id": "b3eaaeee-3f9a-402a-b4d4-953bb307763f",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "description": "Utilise cet outil quand l'utilisateur pose une question sur une série de BD ou un Manga spécifique (ex: combien j'en ai, est-ce qu'il m'en manque). Envoie le nom de la série dans le champ 'titre'.",
+        "workflowId": {
+          "__rl": true,
+          "value": "Vzt1tTIyS94zL5nT",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/Vzt1tTIyS94zL5nT",
+          "cachedResultName": "Recherche de Tomes Manquants"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "titre": "=={{ $json.titre }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "titre",
+              "displayName": "titre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "aNumber",
+              "displayName": "aNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": true
+            },
+            {
+              "id": "thisFieldAcceptsAnyType",
+              "displayName": "thisFieldAcceptsAnyType",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "anArray",
+              "displayName": "anArray",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "array",
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        224
+      ],
+      "id": "6d12cb74-e391-4de5-bba3-c3efd1c8bd93",
+      "name": "Call 'Recherche de Tomes Manquants'"
+    },
+    {
+      "parameters": {
+        "description": "Utilise cet outil pour donner une vue d'ensemble de la collection (total des livres, BD vs Romans). Exécute le avec un paramètre vide.",
+        "workflowId": {
+          "__rl": true,
+          "value": "ut4VjoOHsmxFUBnI",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/ut4VjoOHsmxFUBnI",
+          "cachedResultName": "Statistiques Globales"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        608,
+        224
+      ],
+      "id": "2ae8054c-d26a-410f-b7e1-a0c04c14d296",
+      "name": "Call 'Statistiques Globales'"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        816,
+        0
+      ],
+      "id": "b5990e07-5eb3-4b1e-84b1-041e99080444",
+      "name": "Discord",
+      "webhookId": "725ee283-95dd-456f-9220-7f7746f9f910",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "Z87U1TsLPsjIq5Ef",
+          "name": "Discord Webhook account 4"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Recherche de Tomes Manquants'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Statistiques Globales'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "5f65e204-c784-4cd4-956a-d513d83b0987",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "196c70622468c4e89b9a635be78d21686bf811d1d4c3ee0dff380d732d8d61fa"
+  },
+  "id": "KI9mZiO4LndVGUgr",
+  "tags": []
+}

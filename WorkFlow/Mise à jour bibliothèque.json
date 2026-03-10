@@ -1,0 +1,2401 @@
+{
+  "name": "Mise à jour bibliothèque",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data; \nconst livresExtraits = [];\nconst morceauxDeCode = html.split('bookHorizontalTitlePolice');\n\nfor (let i = 1; i < morceauxDeCode.length; i++) {\n    const morceau = morceauxDeCode[i];\n\n    // 1. TITRE\n    let titre = \"Titre inconnu\";\n    const titreMatch = morceau.match(/>([^<]+)<\\/h2>/);\n    if (titreMatch && titreMatch[1]) titre = titreMatch[1].trim();\n\n    // 2. AUTEUR\n    let auteur = \"Auteur inconnu\";\n    const auteurMatch = morceau.match(/bookHorizontalAuthorPolice[^>]*>([^<]+)<\\/h3>/);\n    if (auteurMatch && auteurMatch[1]) auteur = auteurMatch[1].trim();\n\n    // 3. GENRE\n    let genre = \"Non renseigné\";\n    const genreMatch = morceau.match(/categoryObjectLibelle[^>]*>([^<]+)<\\/p>/);\n    if (genreMatch && genreMatch[1]) genre = genreMatch[1].trim();\n\n    // 4. STATUT (Avec la nouvelle priorité !)\n    let statut = \"Non classé\";\n    \n    // On analyse toutes les couleurs présentes d'un coup\n    let possede = morceau.includes('rgb(60, 164, 255)') || morceau.includes('#3CA4FF');\n    let lu = morceau.includes('rgb(92, 228, 92)') || morceau.includes('#5CE45C');\n    let enCours = morceau.includes('rgb(213, 154, 237)') || morceau.includes('#D59AED');\n    let souhait = morceau.includes('rgb(252, 169, 92)') || morceau.includes('#FCA95C');\n\n    // On donne la priorité absolue à ce que tu possèdes ou as lu\n    if (possede && lu) statut = \"Possédé et Lu\";\n    else if (possede && enCours) statut = \"Possédé et Je lis\";\n    else if (possede && !lu && !enCours) statut = \"Possédé et Non lu\";\n    else if (!possede && lu) statut = \"Non possédé mais Lu\";\n    else if (!possede && enCours) statut = \"Non possédé mais Je lis\";\n    else if (souhait) statut = \"Liste de souhait\"; // Le souhait passe en dernier recours !\n\n    // 5. CRÉATION DE L'ID UNIQUE\n    const id_unique = (titre + auteur).replace(/[^a-zA-Z0-9]/g, \"\").toLowerCase();\n\n    livresExtraits.push({\n        id_unique: id_unique,\n        titre: titre,\n        auteur: auteur,\n        genre: genre,\n        statut: statut\n    });\n}\n\nreturn livresExtraits.map(livre => ({ json: livre }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        336
+      ],
+      "id": "c0e86bef-33bd-41c9-b645-a374a882e686",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "JR0TKpyDV65nIrYH",
+          "mode": "list",
+          "cachedResultName": "Roman",
+          "cachedResultUrl": "/projects/fHV471FQlEt1MgFt/datatables/JR0TKpyDV65nIrYH"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {},
+            {
+              "keyName": "titre"
+            },
+            {
+              "keyName": "auteur"
+            },
+            {
+              "keyName": "genre"
+            },
+            {
+              "keyName": "statut"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "titre",
+              "displayName": "titre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "auteur",
+              "displayName": "auteur",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "genre",
+              "displayName": "genre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "statut",
+              "displayName": "statut",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -432,
+        336
+      ],
+      "id": "103423a5-5207-4362-bd41-be6d22bad078",
+      "name": "Upsert row(s)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const livres = $input.all().map(item => item.json);\n\nlet countSouhait = 0;\nlet countPossessionTotal = 0;\nlet countPossessionEtLu = 0;\nlet countNonPossessionEtLu = 0;\n\nlivres.forEach(livre => {\n    // Liste de souhait\n    if (livre.statut === \"Liste de souhait\") countSouhait++;\n    \n    // Total possédé : on englobe TOUT ce qu'on possède, peu importe si c'est lu, non lu, ou en cours\n    if (livre.statut === \"Possédé et Lu\" || livre.statut === \"Possédé et Non lu\" || livre.statut === \"Possédé et Je lis\") {\n        countPossessionTotal++;\n    }\n    \n    // Les catégories précises\n    if (livre.statut === \"Possédé et Lu\") countPossessionEtLu++;\n    if (livre.statut === \"Non possédé mais Lu\") countNonPossessionEtLu++;\n});\n\nreturn [{\n    json: {\n        \"Liste de souhait\": countSouhait,\n        \"En possession (Total)\": countPossessionTotal,\n        \"En possession et Lu\": countPossessionEtLu,\n        \"Non possédé et Lu\": countNonPossessionEtLu\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        336
+      ],
+      "id": "0175a706-751c-4dcd-808b-c01c1080c94d",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1a2a4c61-13af-4bbf-a05d-016b7b170b7b",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -2224,
+        544
+      ],
+      "id": "ed3bf84b-4652-4a12-8dea-4dd5556c02e1",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "command": "=pkill ngrok; sleep 2; nohup ngrok http 5678 > /dev/null 2>&1 &"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        -2000,
+        736
+      ],
+      "id": "[]",
+      "name": "Restauration Tunnel",
+      "credentials": {
+        "sshPassword": {
+          "id": "[]",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1776,
+        880
+      ],
+      "id": "a17b528f-c48b-496f-9284-4b713344dd33",
+      "name": "Wait",
+      "webhookId": "855308b2-3ca9-4919-b5f5-93254ff00908"
+    },
+    {
+      "parameters": {
+        "command": "=pkill ngrok"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        480,
+        336
+      ],
+      "id": "[]",
+      "name": "Éteindre Tunnel",
+      "credentials": {
+        "sshPassword": {
+          "id": "[]",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "[Tunnel ngrok]",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2448,
+        544
+      ],
+      "id": "0aef505e-6aaa-483b-b9ad-b5c67bb0d2a5",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "value": "JR0TKpyDV65nIrYH",
+          "mode": "list",
+          "cachedResultName": "Roman",
+          "cachedResultUrl": "/projects/fHV471FQlEt1MgFt/datatables/JR0TKpyDV65nIrYH"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "condition": "isNotEmpty"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -880,
+        544
+      ],
+      "id": "023a6888-89e9-4109-a51b-ec0e34012ce2",
+      "name": "Delete row(s)"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "JR0TKpyDV65nIrYH",
+          "mode": "list",
+          "cachedResultName": "Roman",
+          "cachedResultUrl": "/projects/fHV471FQlEt1MgFt/datatables/JR0TKpyDV65nIrYH"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -1328,
+        384
+      ],
+      "id": "b615b917-30f4-452f-962f-a03ac184bbc3",
+      "name": "Get row(s)",
+      "alwaysOutputData": true,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0c7139a7-bae3-4325-ae2d-924368061ae6",
+              "leftValue": "={{ Object.keys($json).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1104,
+        384
+      ],
+      "id": "47c08f5f-3039-437a-9a0b-de115555adab",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1552,
+        448
+      ],
+      "id": "862a855a-d3ff-4401-8695-3fd2542f61b2",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const resultats = $input.first().json;\n\nconst categorieSery = {};\nfunction extraireIdsCategorie(html, nomCat) {\n    if (!html) return;\n    const liens = html.matchAll(/href=\"\\/[^\\/]+\\/serie\\/([a-zA-Z0-9]+)\"/g);\n    for (const match of liens) {\n        categorieSery[match[1]] = nomCat;\n    }\n}\nextraireIdsCategorie(resultats[\"BD\"], \"BD\");\nextraireIdsCategorie(resultats[\"Comics\"], \"Comics\");\nextraireIdsCategorie(resultats[\"Mangas\"], \"Mangas\");\n\nconst idsJaiPas = new Set();\nif (resultats[\"JaiPas\"]) {\n    const liensJaiPas = resultats[\"JaiPas\"].matchAll(/href=\"\\/[^\\/]+\\/serie\\/([a-zA-Z0-9]+)\"/g);\n    for (const match of liensJaiPas) { idsJaiPas.add(match[1]); }\n}\n\nconst idsJai = new Set();\nconst vraisPossedes = {};\nif (resultats[\"Jai\"]) {\n    const morceaux = resultats[\"Jai\"].split('href=\"/');\n    for (let i = 1; i < morceaux.length; i++) {\n        if (!morceaux[i].includes('serie/')) continue;\n        const idMatch = morceaux[i].match(/^[^/]+\\/serie\\/([a-zA-Z0-9]+)\"/);\n        if (!idMatch) continue;\n        const id_unique = idMatch[1];\n        idsJai.add(id_unique);\n        \n        const albumsMatch = morceaux[i].match(/bb-l-text-size[^>]*>\\s*([0-9]+)(?:\\s*\\/\\s*[0-9]+)?\\s*<\\/div>\\s*<div[^>]*>\\s*albums?/i);\n        if (albumsMatch) vraisPossedes[id_unique] = parseInt(albumsMatch[1], 10);\n    }\n}\n\nconst seriesExtraites = [];\nconst idsDejaTraites = new Set();\nconst pagesAAnalyser = [resultats[\"BD\"], resultats[\"Comics\"], resultats[\"Mangas\"], resultats[\"Jai\"], resultats[\"JaiPas\"]];\n\nfor (const html of pagesAAnalyser) {\n    if (!html) continue;\n\n    const morceaux = html.split('href=\"/');\n    for (let i = 1; i < morceaux.length; i++) {\n        const morceau = morceaux[i];\n        if (!morceau.includes('serie/')) continue;\n\n        const idMatch = morceau.match(/^[^/]+\\/serie\\/([a-zA-Z0-9]+)\"/);\n        if (!idMatch) continue;\n        const id_unique = idMatch[1];\n\n        if (idsDejaTraites.has(id_unique)) continue;\n        idsDejaTraites.add(id_unique);\n\n        const titreMatch = morceau.match(/fw-bold[^>]*>\\s*([^<]+)\\s*<\\/div>/i);\n        const titre = titreMatch ? titreMatch[1].trim() : \"Titre inconnu\";\n\n        let albumsLus = 0;\n        const lusMatch = morceau.match(/bb-l-text-size[^>]*>\\s*([0-9]+)(?:\\s*\\/\\s*[0-9]+)?\\s*<\\/div>\\s*<div[^>]*>\\s*lus?/i);\n        if (lusMatch) albumsLus = parseInt(lusMatch[1], 10);\n\n        let albumsPossedes = 0;\n        if (vraisPossedes[id_unique] > 0) {\n            albumsPossedes = vraisPossedes[id_unique];\n        } else if (idsJai.has(id_unique) && !idsJaiPas.has(id_unique)) {\n            albumsPossedes = 1; \n        } else {\n            albumsPossedes = 0;\n        }\n\n        let statut = \"Non classé\";\n        let albumsNonPossedesLu = 0;\n\n        if (albumsPossedes > 0) {\n            if (albumsLus > albumsPossedes) {\n                albumsNonPossedesLu = albumsLus - albumsPossedes;\n                statut = \"Partiellement possédé\";\n            } else if (albumsLus === albumsPossedes) {\n                statut = \"Possédé et Lu\";\n            } else if (albumsLus > 0 && albumsLus < albumsPossedes) {\n                statut = \"Possédé et Je lis\";\n            } else if (albumsLus === 0) {\n                statut = \"Possédé et Non lu\";\n            }\n        } else {\n            if (albumsLus > 0) {\n                albumsNonPossedesLu = albumsLus;\n                statut = \"Non possédé mais Lu\";\n            } else {\n                statut = \"Non possédé et Non lu\";\n            }\n        }\n\n        const categorie = categorieSery[id_unique] || \"Autre\";\n\n        seriesExtraites.push({\n            id_unique: id_unique, titre: titre, categorie: categorie,\n            albums_possedes: albumsPossedes, albums_lus: albumsLus,\n            albums_non_possedes_lu: albumsNonPossedesLu, statut: statut\n        });\n    }\n}\nreturn seriesExtraites.map(serie => ({ json: serie }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        -656
+      ],
+      "id": "b2f15d7d-8b7c-4f31-9504-c24439d39067",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "wSDV9Gsc0U6ie63s",
+          "mode": "list",
+          "cachedResultName": "BD",
+          "cachedResultUrl": "/projects/fHV471FQlEt1MgFt/datatables/wSDV9Gsc0U6ie63s"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {},
+            {
+              "keyName": "titre"
+            },
+            {
+              "keyName": "categorie"
+            },
+            {
+              "keyName": "albums_possedes"
+            },
+            {
+              "keyName": "albums_lus"
+            },
+            {
+              "keyName": "statut"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_unique",
+              "displayName": "id_unique",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "titre",
+              "displayName": "titre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "categorie",
+              "displayName": "categorie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "albums_possedes",
+              "displayName": "albums_possedes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "albums_lus",
+              "displayName": "albums_lus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "statut",
+              "displayName": "statut",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "albums_non_possedes_lu",
+              "displayName": "albums_non_possedes_lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "albums_manquants",
+              "displayName": "albums_manquants",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -432,
+        -656
+      ],
+      "id": "fe0af5c8-f6b2-4030-9b3c-74f4eb0d922a",
+      "name": "Upsert row(s)1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// On récupère toutes les séries\nconst series = $input.all().map(item => item.json);\n\nconst stats = {\n    \"BD\": { possedes: 0, possedes_lus: 0, non_possedes_lus: 0 },\n    \"Comics\": { possedes: 0, possedes_lus: 0, non_possedes_lus: 0 },\n    \"Mangas\": { possedes: 0, possedes_lus: 0, non_possedes_lus: 0 },\n    \"Autre\": { possedes: 0, possedes_lus: 0, non_possedes_lus: 0 }\n};\n\nfor (const s of series) {\n    const cat = s.categorie || \"Autre\";\n    \n    if (!stats[cat]) {\n        stats[cat] = { possedes: 0, possedes_lus: 0, non_possedes_lus: 0 };\n    }\n    \n    stats[cat].possedes += (s.albums_possedes || 0);\n    stats[cat].non_possedes_lus += (s.albums_non_possedes_lu || 0);\n    \n    const lusEtPossedes = (s.albums_lus || 0) - (s.albums_non_possedes_lu || 0);\n    stats[cat].possedes_lus += lusEtPossedes;\n}\n\nconst ligneGoogleSheet = {};\n\nfor (const cat of [\"BD\", \"Comics\", \"Mangas\", \"Autre\"]) {\n    if (cat === \"Autre\" && stats[cat].possedes === 0 && stats[cat].non_possedes_lus === 0) continue;\n    \n    ligneGoogleSheet[`${cat} - Possédés`] = stats[cat].possedes;\n    ligneGoogleSheet[`${cat} - Possédés et Lus`] = stats[cat].possedes_lus;\n    ligneGoogleSheet[`${cat} - Non possédés et Lus`] = stats[cat].non_possedes_lus;\n}\n\nreturn [{ json: ligneGoogleSheet }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -656
+      ],
+      "id": "ab80b282-e4e9-4452-a90a-038c61e0dd7c",
+      "name": "Code in JavaScript3",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://browserless:3000/function?timeout=120000",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"code\": \"export default async function({ page, context }) { await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'); await page.setCookie(...context.cookies); await page.goto(context.url, { waitUntil: 'domcontentloaded', timeout: 0 }); await new Promise(r => setTimeout(r, 6000)); async function autoScroll() { await page.evaluate(async () => { await new Promise((resolve) => { let unchangedCount = 0; let lastCount = 0; const timer = setInterval(() => { window.scrollBy(0, 1000); const items = document.querySelectorAll('a'); if(items.length > 0) items[items.length - 1].scrollIntoView(); const currentCount = items.length; if (currentCount === lastCount) { unchangedCount++; if (unchangedCount >= 10) { clearInterval(timer); resolve(); } } else { lastCount = currentCount; unchangedCount = 0; } }, 400); }); }); } const results = {}; async function getCategoryById(id, name) { await page.evaluate((checkboxId) => { const el = document.getElementById(checkboxId); if(el) el.click(); }, id); await new Promise(r => setTimeout(r, 4000)); await autoScroll(); results[name] = await page.content(); await page.evaluate((checkboxId) => { const el = document.getElementById(checkboxId); if(el) el.click(); }, id); await new Promise(r => setTimeout(r, 2000)); } async function getCategoryByText(txt, name) { await page.goto(context.url, { waitUntil: 'domcontentloaded', timeout: 0 }); await new Promise(r => setTimeout(r, 6000)); await page.evaluate((text) => { const spans = document.querySelectorAll('span.form-check-label'); for (let span of spans) { if (span.textContent.trim() === text) { const input = span.parentElement.querySelector('input'); if(input) { input.click(); } else { span.parentElement.click(); } break; } } }, txt); await new Promise(r => setTimeout(r, 4000)); await autoScroll(); results[name] = await page.content(); } await getCategoryById('checkBd', 'BD'); await getCategoryById('checkComics', 'Comics'); await getCategoryById('checkMangas', 'Mangas'); await getCategoryByText(\\\"J'ai\\\", 'Jai'); await getCategoryByText(\\\"J'ai pas\\\", 'JaiPas'); return results; }\",\n  \"context\": {\n    \"url\": \"{{ $('Configuration Globale').first().json.Bubblebd_Collection }}\",\n    \"cookies\": {{ $('Configuration Globale').first().json.cookie_bubble }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -880,
+        -656
+      ],
+      "id": "b03ee232-4b73-401e-b1fc-4adf1e316511",
+      "name": "Bubblebd / Collection"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://browserless:3000/function?timeout=120000",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"code\": \"export default async function({ page, context }) { await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'); await page.setCookie(...context.cookies); await page.goto(context.url, { waitUntil: 'domcontentloaded', timeout: 0 }); await new Promise(r => setTimeout(r, 6000)); const isLogged = await page.evaluate(() => document.getElementById('checkBd') !== null); if (!isLogged) { return { \\\"statut_session\\\": \\\"invalide\\\", \\\"erreur\\\": \\\"Cookie expiré ou utilisateur déconnecté\\\" }; } async function autoScroll() { await page.evaluate(async () => { await new Promise((resolve) => { const distance = 800; let lastScrollHeight = 0; let unchangedCount = 0; const timer = setInterval(() => { const scrollHeight = document.body.scrollHeight; window.scrollBy(0, distance); if (scrollHeight === lastScrollHeight) { unchangedCount++; if (unchangedCount >= 5) { clearInterval(timer); resolve(); } } else { lastScrollHeight = scrollHeight; unchangedCount = 0; } }, 200); }); }); await new Promise(r => setTimeout(r, 1000)); await page.evaluate(() => window.scrollTo(0, 0)); await new Promise(r => setTimeout(r, 1000)); } await autoScroll(); const results = {}; results['statut_session'] = 'valide'; results['Toutes'] = await page.content(); async function getCategoryById(id, name) { await page.evaluate((checkboxId) => { const el = document.getElementById(checkboxId); if(el) el.click(); }, id); await new Promise(r => setTimeout(r, 4000)); await autoScroll(); results[name] = await page.content(); await page.evaluate((checkboxId) => { const el = document.getElementById(checkboxId); if(el) el.click(); }, id); await new Promise(r => setTimeout(r, 2000)); } await getCategoryById('checkBd', 'BD'); await getCategoryById('checkComics', 'Comics'); await getCategoryById('checkMangas', 'Mangas'); return results; }\",\n  \"context\": {\n    \"url\": \"{{ $('Configuration Globale').first().json.Bubblebd_Souhait }}\",\n    \"cookies\": {{ $('Configuration Globale').first().json.cookie_bubble }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -880,
+        -80
+      ],
+      "id": "3acb0082-fd8e-4cec-9e33-9b782d4c6ff9",
+      "name": "Bubblebd / Souhait"
+    },
+    {
+      "parameters": {
+        "jsCode": "const resultats = $input.first().json;\nconst seriesMap = {};\n\n// 1. On mémorise la catégorie (depuis les listes filtrées)\nfunction extraireIdsCategorie(html, nomCat) {\n    if (!html) return;\n    const liens = html.matchAll(/href=\"\\/[^\\/]+\\/serie\\/([a-zA-Z0-9]+)\"/g);\n    for (const match of liens) {\n        if (!seriesMap[match[1]]) {\n            seriesMap[match[1]] = { id_unique: match[1], categorie: nomCat, titre: \"Titre inconnu\", albums_manquants: 0 };\n        } else {\n            seriesMap[match[1]].categorie = nomCat;\n        }\n    }\n}\nextraireIdsCategorie(resultats[\"BD\"], \"BD\");\nextraireIdsCategorie(resultats[\"Comics\"], \"Comics\");\nextraireIdsCategorie(resultats[\"Mangas\"], \"Mangas\");\n\n// 2. On parcourt TOUTES les listes pour fusionner les données (Titre et Chiffres)\nconst pagesAAnalyser = [resultats[\"Toutes\"], resultats[\"BD\"], resultats[\"Comics\"], resultats[\"Mangas\"]];\n\nfor (const p of pagesAAnalyser) {\n    if (!p) continue;\n    const morceaux = p.split('href=\"/');\n    \n    for (let i = 1; i < morceaux.length; i++) {\n        const morceau = morceaux[i];\n        if (!morceau.includes('serie/')) continue;\n\n        const idMatch = morceau.match(/^[^\\/]+\\/serie\\/([a-zA-Z0-9]+)\"/);\n        if (!idMatch) continue;\n        const id_unique = idMatch[1];\n\n        // On initialise la série si on ne l'a pas encore vue (ex: Les Romans)\n        if (!seriesMap[id_unique]) {\n            seriesMap[id_unique] = { id_unique: id_unique, categorie: \"Autre\", titre: \"Titre inconnu\", albums_manquants: 0 };\n        }\n\n        // On met à jour le titre seulement s'il est présent dans ce morceau de code\n        const titreMatch = morceau.match(/fw-bold bb-medium-text-size pb-1\">([^<]+)<\\/div>/);\n        if (titreMatch) {\n            seriesMap[id_unique].titre = titreMatch[1].trim();\n        }\n\n        // On met à jour le vrai chiffre des manquants !\n        const manquantsMatch = morceau.match(/bb-l-text-size\">([0-9]+)<\\/div>\\s*<div>albums?\\s+manquants?/);\n        if (manquantsMatch) {\n            seriesMap[id_unique].albums_manquants = parseInt(manquantsMatch[1], 10);\n        }\n    }\n}\n\n// On convertit notre dictionnaire infaillible en liste pour n8n\nconst seriesExtraites = Object.values(seriesMap);\n\nreturn seriesExtraites.map(serie => ({ json: serie }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        -80
+      ],
+      "id": "b0f09a8b-837e-4fe9-b627-bb16067514af",
+      "name": "Code in JavaScript4"
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "value": "wSDV9Gsc0U6ie63s",
+          "mode": "list",
+          "cachedResultName": "BD",
+          "cachedResultUrl": "/projects/fHV471FQlEt1MgFt/datatables/wSDV9Gsc0U6ie63s"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "condition": "isNotEmpty"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -880,
+        112
+      ],
+      "id": "b72767c2-920a-4966-b98d-f3a97182bd57",
+      "name": "Delete row(s)1"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "wSDV9Gsc0U6ie63s",
+          "mode": "list",
+          "cachedResultName": "BD",
+          "cachedResultUrl": "/projects/fHV471FQlEt1MgFt/datatables/wSDV9Gsc0U6ie63s"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -1328,
+        -240
+      ],
+      "id": "7d2e33fe-d1d5-43f4-935c-6391cc8c6e4f",
+      "name": "Get row(s)1",
+      "alwaysOutputData": true,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0c7139a7-bae3-4325-ae2d-924368061ae6",
+              "leftValue": "={{ Object.keys($json).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1104,
+        -240
+      ],
+      "id": "6d48a138-0cd3-4748-a496-bc50c0ff6476",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1552,
+        -80
+      ],
+      "id": "6090460b-a7b7-4c0c-a76f-ecd2f04b1674",
+      "name": "Loop Over Items2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://browserless:3000/function?timeout=120000",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"code\": \"export default async function({ page, context }) { await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'); await page.setCookie(...context.cookies); await page.goto(context.url, { waitUntil: 'domcontentloaded', timeout: 0 }); await new Promise(r => setTimeout(r, 6000)); let unchangedCount = 0; const uniqueBooks = new Set(); while (unchangedCount < 12) { await page.evaluate(() => window.scrollBy(0, 3000)); await new Promise(r => setTimeout(r, 800)); const clicked = await page.evaluate(() => { const buttons = Array.from(document.querySelectorAll('button')); const btn = buttons.find(b => b.innerText && b.innerText.toLowerCase().includes('voir plus')); if (btn) { btn.scrollIntoView(); btn.click(); return true; } return false; }); if (clicked) { await new Promise(r => setTimeout(r, 2500)); } const booksHtml = await page.evaluate(() => { const books = []; document.querySelectorAll('h2').forEach(h2 => { let card = h2.closest('li') || h2.parentElement.parentElement; if (card) books.push(card.outerHTML); }); return books; }); const currentSize = uniqueBooks.size; booksHtml.forEach(html => uniqueBooks.add(html)); if (uniqueBooks.size === currentSize) { unchangedCount++; } else { unchangedCount = 0; } } const finalHtml = Array.from(uniqueBooks).join(''); return { data: finalHtml }; }\",\n  \"context\": {\n    \"url\": \"{{ $('Configuration Globale').first().json.gleeph }}\",\n    \"cookies\": {{ $('Configuration Globale').first().json.cookie_gleeph }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -880,
+        336
+      ],
+      "id": "1b7b63fd-600a-4b5e-947c-414b48daf8e3",
+      "name": "Gleeph"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "wSDV9Gsc0U6ie63s",
+          "mode": "list",
+          "cachedResultName": "BD",
+          "cachedResultUrl": "/projects/fHV471FQlEt1MgFt/datatables/wSDV9Gsc0U6ie63s"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id_unique"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_unique",
+              "displayName": "id_unique",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "titre",
+              "displayName": "titre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "categorie",
+              "displayName": "categorie",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "albums_possedes",
+              "displayName": "albums_possedes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "albums_lus",
+              "displayName": "albums_lus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "statut",
+              "displayName": "statut",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "albums_non_possedes_lu",
+              "displayName": "albums_non_possedes_lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "albums_manquants",
+              "displayName": "albums_manquants",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -432,
+        -80
+      ],
+      "id": "1b7984a1-fb8f-4c9e-a607-9962726b131b",
+      "name": "Upsert row(s)2"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": "[]"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": ,
+          "mode": "list",
+          "cachedResultName": "N8N",
+          "cachedResultUrl": "[]"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Liste de souhait": "={{ $json[\"Liste de souhait\"] }}",
+            "En possession (Total)": "={{ $json[\"En possession (Total)\"] }}",
+            "En possession et Lu": "={{ $json[\"En possession et Lu\"] }}",
+            "Non possédé et Lu": "={{ $json[\"Non possédé et Lu\"] }}",
+            "Genre": "Roman"
+          },
+          "matchingColumns": [
+            "Genre"
+          ],
+          "schema": [
+            {
+              "id": "Genre",
+              "displayName": "Genre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Liste de souhait",
+              "displayName": "Liste de souhait",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "En possession (Total)",
+              "displayName": "En possession (Total)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "En possession et Lu",
+              "displayName": "En possession et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Non possédé et Lu",
+              "displayName": "Non possédé et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        32,
+        336
+      ],
+      "id": "b1a73232-70ad-4736-96f5-2ae57443d12a",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "i5xdEkZkoJZyyUBs",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// On récupère toutes les séries de la liste de souhaits\nconst series = $input.all().map(item => item.json);\n\n// 1. Initialisation des compteurs (y compris \"Autre\")\nconst stats = {\n    \"BD\": 0, \n    \"Comics\": 0, \n    \"Mangas\": 0, \n    \"Autre\": 0\n};\n\n// 2. On boucle sur toutes tes séries pour additionner les albums manquants\nfor (const s of series) {\n    const cat = s.categorie || \"Autre\";\n    \n    // Si la catégorie existe dans notre dictionnaire, on ajoute le nombre de manquants\n    if (stats[cat] !== undefined) {\n        stats[cat] += (s.albums_manquants || 0);\n    }\n}\n\n// 3. On prépare la ligne unique pour ton Google Sheets\nconst ligneGoogleSheet = {\n    \"BD - Manquants\": stats[\"BD\"],\n    \"Comics - Manquants\": stats[\"Comics\"],\n    \"Mangas - Manquants\": stats[\"Mangas\"],\n    \"Autre - Manquants\": stats[\"Autre\"]\n};\n\n// On renvoie la ligne prête à être expédiée !\nreturn [{ json: ligneGoogleSheet }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -80
+      ],
+      "id": "0f3a9ae4-6b2c-4de8-bcab-e070485fb82a",
+      "name": "Code in JavaScript5"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1Xiv_x2Fhzy6dDvlC8VZ3Ik2aDVNHeFsHxmI2DXj7IYU",
+          "mode": "list",
+          "cachedResultName": "Bibliothèque",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": ,
+          "mode": "list",
+          "cachedResultName": "N8N",
+          "cachedResultUrl": "[]"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Genre": "Manga",
+            "En possession (Total)": "={{ $json[\"Mangas - Possédés\"] }}",
+            "En possession et Lu": "={{ $json[\"Mangas - Possédés et Lus\"] }}",
+            "Non possédé et Lu": "={{ $json[\"Mangas - Non possédés et Lus\"] }}"
+          },
+          "matchingColumns": [
+            "Genre"
+          ],
+          "schema": [
+            {
+              "id": "Genre",
+              "displayName": "Genre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Liste de souhait",
+              "displayName": "Liste de souhait",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "En possession (Total)",
+              "displayName": "En possession (Total)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "En possession et Lu",
+              "displayName": "En possession et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Non possédé et Lu",
+              "displayName": "Non possédé et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        32,
+        -848
+      ],
+      "id": "",
+      "name": "",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "[]",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": "[]"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": ,
+          "mode": "list",
+          "cachedResultName": "N8N",
+          "cachedResultUrl": "[]"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Genre": "Comcis",
+            "En possession (Total)": "={{ $json[\"Comics - Possédés\"] }}",
+            "En possession et Lu": "={{ $json[\"Comics - Possédés et Lus\"] }}",
+            "Non possédé et Lu": "={{ $json[\"Comics - Non possédés et Lus\"] }}"
+          },
+          "matchingColumns": [
+            "Genre"
+          ],
+          "schema": [
+            {
+              "id": "Genre",
+              "displayName": "Genre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Liste de souhait",
+              "displayName": "Liste de souhait",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "En possession (Total)",
+              "displayName": "En possession (Total)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "En possession et Lu",
+              "displayName": "En possession et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Non possédé et Lu",
+              "displayName": "Non possédé et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        32,
+        -656
+      ],
+      "id": "38514ff6-c9c3-4904-a4ae-f26fa77f2b6d",
+      "name": "Comics",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "i5xdEkZkoJZyyUBs",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": "[]"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": ,
+          "mode": "list",
+          "cachedResultName": "N8N",
+          "cachedResultUrl": "[]"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Genre": "BD",
+            "En possession (Total)": "={{ $json[\"BD - Possédés\"] + $json[\"Autre - Possédés\"] }}",
+            "En possession et Lu": "={{ $json[\"BD - Possédés et Lus\"] + $json[\"Autre - Possédés et Lus\"] }}",
+            "Non possédé et Lu": "={{ $json[\"BD - Non possédés et Lus\"] + $json[\"Autre - Non possédés et Lus\"] }}"
+          },
+          "matchingColumns": [
+            "Genre"
+          ],
+          "schema": [
+            {
+              "id": "Genre",
+              "displayName": "Genre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Liste de souhait",
+              "displayName": "Liste de souhait",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "En possession (Total)",
+              "displayName": "En possession (Total)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "En possession et Lu",
+              "displayName": "En possession et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Non possédé et Lu",
+              "displayName": "Non possédé et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        32,
+        -464
+      ],
+      "id": "a39748c9-342b-4569-aedd-e71c7eb5aa88",
+      "name": "BD",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "i5xdEkZkoJZyyUBs",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -2672,
+        720
+      ],
+      "id": "e2ff8e7d-b92a-4557-939e-5a221cbea794",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Bibliothèque",
+          "cachedResultUrl": "[]"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": ,
+          "mode": "list",
+          "cachedResultName": "N8N",
+          "cachedResultUrl": "[]"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Genre": "Manga",
+            "Liste de souhait": "={{ $json[\"Mangas - Manquants\"] }}"
+          },
+          "matchingColumns": [
+            "Genre"
+          ],
+          "schema": [
+            {
+              "id": "Genre",
+              "displayName": "Genre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Liste de souhait",
+              "displayName": "Liste de souhait",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "En possession (Total)",
+              "displayName": "En possession (Total)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "En possession et Lu",
+              "displayName": "En possession et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Non possédé et Lu",
+              "displayName": "Non possédé et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        32,
+        -272
+      ],
+      "id": "66411cd2-c944-4460-b2c9-46f916f98481",
+      "name": "Manga1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "i5xdEkZkoJZyyUBs",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": "[]k"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": ,
+          "mode": "list",
+          "cachedResultName": "N8N",
+          "cachedResultUrl": "[]"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Genre": "Comcis",
+            "Liste de souhait": "={{ $json[\"Comics - Manquants\"] }}"
+          },
+          "matchingColumns": [
+            "Genre"
+          ],
+          "schema": [
+            {
+              "id": "Genre",
+              "displayName": "Genre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Liste de souhait",
+              "displayName": "Liste de souhait",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "En possession (Total)",
+              "displayName": "En possession (Total)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "En possession et Lu",
+              "displayName": "En possession et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Non possédé et Lu",
+              "displayName": "Non possédé et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        32,
+        -80
+      ],
+      "id": "00468722-a0e9-47ff-9fa2-40baa2667d81",
+      "name": "Comics1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "i5xdEkZkoJZyyUBs",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": "[]"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": ,
+          "mode": "list",
+          "cachedResultName": "N8N",
+          "cachedResultUrl": "[]"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Genre": "BD",
+            "Liste de souhait": "={{ $json[\"BD - Manquants\"] +  $json[\"Autre - Manquants\"]}}"
+          },
+          "matchingColumns": [
+            "Genre"
+          ],
+          "schema": [
+            {
+              "id": "Genre",
+              "displayName": "Genre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Liste de souhait",
+              "displayName": "Liste de souhait",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "En possession (Total)",
+              "displayName": "En possession (Total)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "En possession et Lu",
+              "displayName": "En possession et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Non possédé et Lu",
+              "displayName": "Non possédé et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        32,
+        144
+      ],
+      "id": "dd24f427-324b-48b5-9700-b85f33611e0e",
+      "name": "BD1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "i5xdEkZkoJZyyUBs",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "89b74754-7887-4bbd-9d18-861ce7c8d033",
+              "leftValue": "={{ $json.statut_session }}",
+              "rightValue": "valide",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1776,
+        16
+      ],
+      "id": "5b8b830d-895f-4187-8620-0b78455e31b8",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "89b74754-7887-4bbd-9d18-861ce7c8d033",
+              "leftValue": "={{ $json.statut_session }}",
+              "rightValue": "valide",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1776,
+        544
+      ],
+      "id": "12cdf595-1fbc-43fc-abff-4b6cd7290327",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://browserless:3000/function?timeout=120000",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"code\": \"export default async function({ page, context }) { await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'); await page.setCookie(...context.cookies); await page.goto(context.url, { waitUntil: 'domcontentloaded', timeout: 0 }); await new Promise(r => setTimeout(r, 4000)); const currentUrl = page.url(); const isLogged = currentUrl.includes('shelf'); return isLogged ? { \\\"statut_session\\\": \\\"valide\\\" } : { \\\"statut_session\\\": \\\"invalide\\\", \\\"erreur\\\": \\\"Cookie Gleeph expiré ou utilisateur déconnecté\\\" }; }\",\n  \"context\": {\n    \"url\": \"{{ $('Configuration Globale').first().json.gleeph }}\",\n    \"cookies\": {{ $('Configuration Globale').first().json.cookie_gleeph }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2000,
+        544
+      ],
+      "id": "df30174c-3da0-4345-b4d8-012d0aeec317",
+      "name": "Gleeph1"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=🚨 **ALERTE BUBBLE BD** 🚨\nLe workflow d'extraction s'est arrêté car il n'a pas pu se connecter au compte.\n\n**Raison :** {{ $json.erreur }}\n\n👉 Pense à aller récupérer un nouveau Cookie sur le site et à le mettre à jour dans n8n !",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        -1552,
+        240
+      ],
+      "id": "[]",
+      "name": "Discord",
+      "webhookId": "[]",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "[]",
+          "name": "Discord Webhook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=🚨 **ALERTE Gleeph** 🚨\nLe workflow d'extraction s'est arrêté car il n'a pas pu se connecter au compte.\n\n**Raison :** {{ $json.erreur }}\n\n👉 Pense à aller récupérer un nouveau Cookie sur le site et à le mettre à jour dans n8n !",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        -1552,
+        640
+      ],
+      "id": "[]",
+      "name": "Discord1",
+      "webhookId": "[]",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "[]",
+          "name": "Discord Webhook account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://browserless:3000/function?timeout=120000",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"code\": \"export default async function({ page, context }) { await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'); await page.setCookie(...context.cookies); await page.goto(context.url, { waitUntil: 'domcontentloaded', timeout: 0 }); await new Promise(r => setTimeout(r, 4000)); const isLogged = await page.evaluate(() => document.getElementById('checkBd') !== null); return isLogged ? { \\\"statut_session\\\": \\\"valide\\\" } : { \\\"statut_session\\\": \\\"invalide\\\", \\\"erreur\\\": \\\"Cookie Bubble expiré ou utilisateur déconnecté\\\" }; }\",\n  \"context\": {\n    \"url\": \"{{ $('Configuration Globale').first().json.Bubblebd_Souhait }}\",\n    \"cookies\": {{ $('Configuration Globale').first().json.cookie_bubble }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2000,
+        16
+      ],
+      "id": "841a8156-bf82-4efc-b16c-afb631152ad8",
+      "name": "Bubblebd / Souhait1"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "Ta bibliothèque est à jour. N'oublie pas d'ajouter les stat de tes romans.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        256,
+        336
+      ],
+      "id": "[]",
+      "name": "Discord2",
+      "webhookId": "[]",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "[]",
+          "name": "Discord Webhook account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.Statistiques;\nconst stats = {};\n\n// 1. EXTRACTION DES PAGES LUES\n// On cherche le chiffre brut dans la classe bb-xl-text-size\nconst pagesMatch = html.match(/bb-xl-text-size\">([0-9\\s]+)<\\/div><div[^>]*>pages lues/);\nif (pagesMatch) {\n    stats.pages_lues = parseInt(pagesMatch[1].replace(/\\s/g, ''), 10);\n}\n\n// 2. EXTRACTION DE LA VALEUR DE LA COLLECTION\n// On cherche le montant dans le style font-size: 3rem\nconst valeurMatch = html.match(/font-size: 3rem;\">([^<]+)<\\/div>/);\nif (valeurMatch) {\n    // Nettoyage : on enlève les espaces, le symbole €, et on remplace la virgule par un point\n    let valeurBrute = valeurMatch[1].replace(/&nbsp;/g, '').replace('€', '').replace(/\\s/g, '').replace(',', '.');\n    stats.valeur_collection = parseFloat(valeurBrute);\n}\n\n// 3. EXTRACTION DU POIDS DE LA COLLECTION\n// On cherche le texte directement dans la classe bb-xxl-text-size suivi de \"kg\"\nconst poidsMatch = html.match(/bb-xxl-text-size\">([0-9.,\\s]+)\\s*kg<\\/div>/);\nif (poidsMatch) {\n    // Nettoyage : on garde les chiffres et le point/virgule, puis on convertit\n    let poidsBrut = poidsMatch[1].replace(/\\s/g, '').replace(',', '.');\n    stats.poids_collection = parseFloat(poidsBrut);\n} else {\n    stats.poids_collection = 0;\n}\n\nreturn [{ json: stats }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1328,
+        -432
+      ],
+      "id": "6728b4f6-cb9f-47fa-b7a7-2571e1048c91",
+      "name": "Code in JavaScript6"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Bibliothèque",
+          "cachedResultUrl": "[]"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": ,
+          "mode": "list",
+          "cachedResultName": "N8N",
+          "cachedResultUrl": "[]"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Pages": "={{ $json.pages_lues }}",
+            "Autre Stat": "BD",
+            "Prix": "={{ $json.valeur_collection }}",
+            "Poids": "={{ $json.poids_collection }}"
+          },
+          "matchingColumns": [
+            "Autre Stat"
+          ],
+          "schema": [
+            {
+              "id": "Genre",
+              "displayName": "Genre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Liste de souhait",
+              "displayName": "Liste de souhait",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "En possession (Total)",
+              "displayName": "En possession (Total)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "En possession et Lu",
+              "displayName": "En possession et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Non possédé et Lu",
+              "displayName": "Non possédé et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Autre Stat",
+              "displayName": "Autre Stat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Pages",
+              "displayName": "Pages",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Poids",
+              "displayName": "Poids",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Prix",
+              "displayName": "Prix",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1104,
+        -432
+      ],
+      "id": "43113bf1-f0a7-49d3-bb3d-3907084e7f8a",
+      "name": "BD2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "i5xdEkZkoJZyyUBs",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1,
+                2,
+                3,
+                5,
+                4
+              ],
+              "triggerAtHour": 17
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -3120,
+        720
+      ],
+      "id": "98e8ecf9-b4e1-472c-8e91-e04e343c053e",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://browserless:3000/function?timeout=120000",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"code\": \"export default async function({ page, context }) { await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'); await page.setCookie(...context.cookies); await page.goto(context.url, { waitUntil: 'domcontentloaded', timeout: 0 }); await new Promise(r => setTimeout(r, 5000)); const html = await page.content(); return { Statistiques: html }; }\",\n  \"context\": {\n    \"url\": \"{{ $('Configuration Globale').first().json.Bubblebd_Stat }}\",\n    \"cookies\": {{ $('Configuration Globale').first().json.cookie_bubble }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1552,
+        -432
+      ],
+      "id": "d5760099-5549-4d1e-b10c-b859b8dbe497",
+      "name": "Bubblebd / Stat"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0c9cd799-12f4-4bc6-b80d-3722f0d03448",
+              "name": "cookie_bubble",
+              "value": "[Cookie Bubble]",
+              "type": "string"
+            },
+            {
+              "id": "8bfe5f63-5941-4e88-83b6-e7b9fac8ac7a",
+              "name": "cookie_gleeph",
+              "value": "[Cookie Gleeph]",
+              "type": "string"
+            },
+            {
+              "id": "71f24ddc-5871-4017-aadc-9e1be9519393",
+              "name": "gleeph",
+              "value": "[Lien vers votre bibliothèque Gleeph]",
+              "type": "string"
+            },
+            {
+              "id": "b1612970-dcdf-418f-9e44-639a9e90f80b",
+              "name": "Bubblebd_Stat",
+              "value": "[Lien vers vos stat Bubble]",
+              "type": "string"
+            },
+            {
+              "id": "3d316537-7053-436a-bced-d9e55992a579",
+              "name": "Bubblebd_Souhait",
+              "value": "[Lien vers votre liste de souhait Bubble]",
+              "type": "string"
+            },
+            {
+              "id": "172e31bf-4786-453f-b8dc-c3f3b9fdd76b",
+              "name": "Bubblebd_Collection",
+              "value": "[Lien vers votre coleection Bubble]",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2896,
+        720
+      ],
+      "id": "bd42f7a2-9bca-452e-96c3-cd8622f58a58",
+      "name": "Configuration Globale"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Upsert row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert row(s)": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Gleeph1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Bubblebd / Souhait1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Restauration Tunnel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restauration Tunnel": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete row(s)": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Gleeph",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Upsert row(s)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert row(s)1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "Manga",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Comics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bubblebd / Collection": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript4": {
+      "main": [
+        [
+          {
+            "node": "Upsert row(s)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bubblebd / Souhait": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete row(s)1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)1": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Bubblebd / Souhait",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Bubblebd / Collection",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete row(s)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items2": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gleeph": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert row(s)2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Discord2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript5": {
+      "main": [
+        [
+          {
+            "node": "BD1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Comics1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Manga1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Bubblebd / Stat",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Discord1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gleeph1": {
+      "main": [
+        [
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bubblebd / Souhait1": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord2": {
+      "main": [
+        [
+          {
+            "node": "Éteindre Tunnel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript6": {
+      "main": [
+        [
+          {
+            "node": "BD2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Configuration Globale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bubblebd / Stat": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuration Globale": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "a6dd695e-f779-4947-998d-f327c27641ae",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "196c70622468c4e89b9a635be78d21686bf811d1d4c3ee0dff380d732d8d61fa"
+  },
+  "id": "BVwlpEkMF4IfrVWg",
+  "tags": []
+}
