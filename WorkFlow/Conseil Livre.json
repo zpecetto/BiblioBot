@@ -44,11 +44,11 @@
         224,
         224
       ],
-      "id": "7f09948c-3a0f-415d-92ac-5b482f5edc89",
+      "id": "[]",
       "name": "Ollama Chat Model",
       "credentials": {
         "ollamaApi": {
-          "id": "RvwibvBQtNpHngqc",
+          "id": "[]",
           "name": "Ollama account"
         }
       }
@@ -176,13 +176,13 @@
         816,
         0
       ],
-      "id": "b5990e07-5eb3-4b1e-84b1-041e99080444",
+      "id": "[]",
       "name": "Discord",
-      "webhookId": "725ee283-95dd-456f-9220-7f7746f9f910",
+      "webhookId": "[]",
       "credentials": {
         "discordWebhookApi": {
-          "id": "Z87U1TsLPsjIq5Ef",
-          "name": "Discord Webhook account 4"
+          "id": "[]",
+          "name": "Discord Webhook account"
         }
       }
     }
