@@ -1,0 +1,1312 @@
+{
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "active": false,
+  "pinData": {},
+  "tags": [],
+  "name": "BiblioBot - Audible",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://YOUR_N8N_HOST.example.invalid/",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -5328,
+        2112
+      ],
+      "id": "4275f979-29b9-5b84-99e7-34a230c702d6",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4a1cf3d8-1821-5694-aec3-54e02e71b37f",
+              "name": "jour_de_la_semaine",
+              "value": "={{ $json.jour_de_la_semaine }}",
+              "type": "string"
+            },
+            {
+              "id": "26379375-e3fe-5465-8a04-45b1068d6920",
+              "name": "cookie_audible",
+              "value": "[]",
+              "type": "string"
+            },
+            {
+              "id": "50623bff-b4cb-5373-918a-ce31600abe02",
+              "name": "force_cookie_audible",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -5776,
+        2192
+      ],
+      "id": "97ae8d7c-d0a4-5b23-a5a2-92513f1846f1",
+      "name": "Configuration Globale"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dfe26474-e182-5972-9207-d7a85fa59c45",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -5104,
+        2112
+      ],
+      "id": "80e4254d-8b14-50be-aa55-0613ace04b5a",
+      "name": "If5"
+    },
+    {
+      "parameters": {
+        "command": "=pkill ngrok; sleep 2; nohup ngrok http 5678 > /dev/null 2>&1 &"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        -4880,
+        2224
+      ],
+      "id": "049e0678-e43b-521f-baad-d21bbf67cc5f",
+      "name": "Restauration Tunnel1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -4688,
+        2368
+      ],
+      "id": "b1002319-8ca8-5ce4-8160-ac9b2b64e9c6",
+      "name": "Wait1",
+      "webhookId": "b17bce1d-ba4d-5622-aff3-0575908ee267"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -5552,
+        2192
+      ],
+      "id": "4f008555-7036-5b3e-b20c-83f91b5c0906",
+      "name": "Loop Over Items4"
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $now }}",
+        "format": "custom",
+        "customFormat": "E",
+        "outputFieldName": "jour_de_la_semaine",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        -6000,
+        2192
+      ],
+      "id": "d78a60a8-4824-584a-8349-d3a476ce9e75",
+      "name": "Date & Time"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -2992,
+        4672
+      ],
+      "id": "37cb799c-ee9a-5264-907b-81bf3981d2f1",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_AUDIBLE_TABLE_ID",
+          "mode": "id"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -2768,
+        4640
+      ],
+      "id": "967db606-6256-5ae8-a84b-f3921981be0f",
+      "name": "Get row(s)2",
+      "alwaysOutputData": true,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "29a9eb91-2446-52d8-9b65-30fa80ced18a",
+              "leftValue": "={{ Object.keys($json).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -2544,
+        4640
+      ],
+      "id": "965a90f3-cdba-52be-aeeb-2de6d5810a35",
+      "name": "If9"
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_AUDIBLE_TABLE_ID",
+          "mode": "id"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "condition": "isNotEmpty"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -2320,
+        4800
+      ],
+      "id": "96fddb2f-cf24-5fea-9b12-ea89ca51e898",
+      "name": "Delete row(s)2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first()?.json || {};\n\nlet data = input;\n\n// Browserless peut renvoyer soit directement l'objet,\n// soit un objet avec data en string/object selon la config n8n.\nif (typeof data === \"string\") {\n  data = JSON.parse(data);\n}\n\nif (typeof data.data === \"string\") {\n  data = JSON.parse(data.data);\n} else if (data.data && typeof data.data === \"object\") {\n  data = data.data;\n}\n\nif (data.error) {\n  throw new Error(data.error);\n}\n\nconst books = Array.isArray(data.books) ? data.books : [];\n\nif (books.length === 0) {\n  const debug = {\n    statut_session: data.statut_session || null,\n    library_count: data.library_count || 0,\n    wishlist_count: data.wishlist_count || 0,\n    debug: data.debug || null,\n    keys_recues: Object.keys(data)\n  };\n\n  throw new Error(\n    \"Aucun livre Audible extrait. Debug: \" +\n    JSON.stringify(debug).slice(0, 4000)\n  );\n}\n\nfunction cleanText(value, fallback = \"\") {\n  return String(value || fallback)\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nconst unique = new Map();\n\nfor (const book of books) {\n  if (!book || !book.id_unique) continue;\n\n  const cleanBook = {\n    id_unique: cleanText(book.id_unique),\n    titre: cleanText(book.titre, \"Titre inconnu\"),\n    auteur: cleanText(book.auteur, \"Auteur inconnu\"),\n    duree_brute: cleanText(book.duree_brute, \"0 min\"),\n    statut: cleanText(book.statut, \"Non classé\"),\n    genre: \"Livre Audio\"\n  };\n\n  const key = `${cleanBook.id_unique}-${cleanBook.statut}`;\n  unique.set(key, cleanBook);\n}\n\nconst result = Array.from(unique.values()).map(book => ({\n  json: book\n}));\n\nif (result.length === 0) {\n  const debug = {\n    statut_session: data.statut_session || null,\n    library_count: data.library_count || 0,\n    wishlist_count: data.wishlist_count || 0,\n    debug: data.debug || null,\n    keys_recues: Object.keys(data)\n  };\n\n  throw new Error(\n    \"Aucun livre Audible valide après nettoyage. Debug: \" +\n    JSON.stringify(debug).slice(0, 4000)\n  );\n}\n\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2096,
+        4544
+      ],
+      "id": "f5a6d59d-f43d-555d-be37-dd7f58706f21",
+      "name": "Code in JavaScript8"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_AUDIBLE_TABLE_ID",
+          "mode": "id"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {}
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_unique",
+              "displayName": "id_unique",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "titre",
+              "displayName": "titre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "auteur",
+              "displayName": "auteur",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "duree_brute",
+              "displayName": "duree_brute",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "statut",
+              "displayName": "statut",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "genre",
+              "displayName": "genre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -1872,
+        4544
+      ],
+      "id": "5490dd44-9a4b-56b7-ab63-71c36522c19e",
+      "name": "Upsert row(s)3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const books = $input.all();\n\nlet totalOwnedSeconds = 0;\nlet totalListenedSeconds = 0;\n\nlet countPossedesTotal = 0;\nlet countPossedesEcoutes = 0;\nlet countSouhaits = 0;\n\n// Average only includes listened books with a valid duration.\nlet countEcoutesAvecDuree = 0;\n\n// Min and max durations of listened audiobooks.\nlet maxListenedSeconds = -1;\nlet minListenedSeconds = Infinity;\n\nlet titreMaxEcoute = \"Aucun\";\nlet titreMinEcoute = \"Aucun\";\n\nfunction normalizeText(value) {\n  return String(value || \"\")\n    .toLowerCase()\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\")\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nfunction parseDurationToSeconds(duration) {\n  const text = normalizeText(duration)\n    .replace(/heures?/g, \"h\")\n    .replace(/hours?/g, \"h\")\n    .replace(/minutes?/g, \"min\")\n    .replace(/\\s+et\\s+/g, \" \")\n    .replace(/\\s+and\\s+/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .trim();\n\n  let hours = 0;\n  let minutes = 0;\n\n  const combinedMatch = text.match(/(\\d{1,3})\\s*h\\s*(\\d{1,2})\\s*min/);\n  const hourMatch = text.match(/(\\d{1,3})\\s*h/);\n  const minuteMatch = text.match(/(\\d{1,2})\\s*min/);\n\n  if (combinedMatch) {\n    hours = parseInt(combinedMatch[1], 10);\n    minutes = parseInt(combinedMatch[2], 10);\n  } else {\n    if (hourMatch) {\n      hours = parseInt(hourMatch[1], 10);\n    }\n\n    if (minuteMatch) {\n      minutes = parseInt(minuteMatch[1], 10);\n    }\n  }\n\n  if (Number.isNaN(hours)) hours = 0;\n  if (Number.isNaN(minutes)) minutes = 0;\n\n  // Preserve the existing guard against incorrectly parsed durations.\n  if (hours > 120 || minutes > 59) {\n    return 0;\n  }\n\n  return (hours * 3600) + (minutes * 60);\n}\n\nfunction formatSecondsToDuration(seconds) {\n  const safeSeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : 0;\n\n  const totalMinutes = Math.round(safeSeconds / 60);\n  const hours = Math.floor(totalMinutes / 60);\n  const minutes = totalMinutes % 60;\n\n  return `${hours} h ${minutes} min`;\n}\n\nfunction normalizeStatus(status) {\n  return normalizeText(status);\n}\n\nfunction getBookTitle(book) {\n  return (\n    book.titre ||\n    book.title ||\n    book.nom ||\n    book.name ||\n    \"Titre inconnu\"\n  );\n}\n\nfor (const item of books) {\n  const book = item.json || {};\n\n  const status = normalizeStatus(book.statut);\n  const seconds = parseDurationToSeconds(book.duree_brute);\n  const titre = getBookTitle(book);\n\n  const isWishlist =\n    status === \"liste de souhait\" ||\n    status === \"liste d envie\" ||\n    status === \"liste d envies\";\n\n  const isOwned = status.startsWith(\"possede\");\n\n  const isListened =\n    status === \"possede et ecoute\" ||\n    status === \"possede et ecoutee\" ||\n    status === \"possede et lu\" ||\n    status === \"possede et termine\";\n\n  if (isWishlist) {\n    countSouhaits++;\n    continue;\n  }\n\n  if (isOwned) {\n    countPossedesTotal++;\n    totalOwnedSeconds += seconds;\n  }\n\n  if (isListened) {\n    countPossedesEcoutes++;\n    totalListenedSeconds += seconds;\n\n    if (seconds > 0) {\n      countEcoutesAvecDuree++;\n\n      if (seconds > maxListenedSeconds) {\n        maxListenedSeconds = seconds;\n        titreMaxEcoute = titre;\n      }\n\n      if (seconds < minListenedSeconds) {\n        minListenedSeconds = seconds;\n        titreMinEcoute = titre;\n      }\n    }\n  }\n}\n\nconst totalOwnedHours = Math.round(totalOwnedSeconds / 3600);\nconst totalListenedHours = Math.round(totalListenedSeconds / 3600);\n\nconst totalOwnedDurationFormatted =\n  formatSecondsToDuration(totalOwnedSeconds);\n\nconst totalListenedDurationFormatted =\n  formatSecondsToDuration(totalListenedSeconds);\n\nconst averageListenedSeconds =\n  countEcoutesAvecDuree > 0\n    ? totalListenedSeconds / countEcoutesAvecDuree\n    : 0;\n\nconst averageListenedDurationFormatted =\n  formatSecondsToDuration(averageListenedSeconds);\n\nconst maxEcouteFormatted =\n  maxListenedSeconds > 0\n    ? `${titreMaxEcoute} (${formatSecondsToDuration(maxListenedSeconds)})`\n    : \"Aucun\";\n\nconst minEcouteFormatted =\n  minListenedSeconds !== Infinity\n    ? `${titreMinEcoute} (${formatSecondsToDuration(minListenedSeconds)})`\n    : \"Aucun\";\n\nconst prixEstime = (countPossedesTotal * 9.95).toLocaleString(\"fr-FR\", {\n  minimumFractionDigits: 2,\n  maximumFractionDigits: 2\n});\n\nreturn [\n  {\n    json: {\n      Genre: \"Livre Audio\",\n\n      \"En possession (Total)\": countPossedesTotal,\n      \"En possession et Lu\": countPossedesEcoutes,\n      \"Liste de souhait\": countSouhaits,\n\n      // The existing Pages column stores total owned hours.\n      \"Pages\": totalOwnedHours,\n\n      // Overall durations.\n      \"Durée totale\": totalOwnedDurationFormatted,\n      \"Heures écoutées\": totalListenedHours,\n\n      // Listened duration in seconds.\n      \"Durée écoutée\": Math.round(totalListenedSeconds),\n\n      // Human-readable listened duration.\n      \"Durée écoutée formatée\": totalListenedDurationFormatted,\n\n      // Estimated price with French formatting.\n      \"Prix\": prixEstime,\n\n      // Min, max and average durations of listened audiobooks.\n      \"Max\": maxEcouteFormatted,\n      \"Min\": minEcouteFormatted,\n      \"Moyenne Audio\": averageListenedDurationFormatted,\n\n      // Keep compatibility with the existing Google Sheets column.\n      \"Moyenne Roman\": averageListenedDurationFormatted,\n\n      \"Max secondes\": maxListenedSeconds > 0 ? maxListenedSeconds : 0,\n      \"Min secondes\": minListenedSeconds !== Infinity ? minListenedSeconds : 0,\n      \"Moyenne secondes\": Math.round(averageListenedSeconds)\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1200,
+        4544
+      ],
+      "id": "e48062e5-4c47-509d-ae82-5fe8966906c0",
+      "name": "Code in JavaScript9"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YOUR_AUDIBLE_TABLE_ID",
+          "mode": "id"
+        },
+        "matchType": "allConditions",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -1424,
+        4544
+      ],
+      "id": "25660017-c137-5e6b-8278-26c4d319af79",
+      "name": "Get row(s)3"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1648,
+        4544
+      ],
+      "id": "fa2bf9f5-f4d0-5c1d-b61d-6fd664af74dd",
+      "name": "Aggregate2"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8010/audible/export",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2320,
+        4544
+      ],
+      "id": "978cb5b3-9f20-51c3-9b6f-84b6e30da197",
+      "name": "HTTP Request Audible API"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "N8N",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Genre": "Livre Audio",
+            "En possession (Total)": "={{ $('Code in JavaScript9').first().json['En possession (Total)'] ?? 0 }}",
+            "Liste de souhait": "={{ $('Code in JavaScript9').first().json['Liste de souhait'] ?? 0 }}",
+            "En possession et Lu": "={{ $('Code in JavaScript9').first().json['En possession et Lu'] ?? 0 }}",
+            "Non possédé et Lu": "0"
+          },
+          "matchingColumns": [
+            "Genre"
+          ],
+          "schema": [
+            {
+              "id": "Genre",
+              "displayName": "Genre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Liste de souhait",
+              "displayName": "Liste de souhait",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "En possession (Total)",
+              "displayName": "En possession (Total)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "En possession et Lu",
+              "displayName": "En possession et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Non possédé et Lu",
+              "displayName": "Non possédé et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Dédicace",
+              "displayName": "Dédicace",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Autre Stat",
+              "displayName": "Autre Stat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Pages",
+              "displayName": "Pages",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Poids",
+              "displayName": "Poids",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Prix",
+              "displayName": "Prix",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Stat",
+              "displayName": "Stat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Max",
+              "displayName": "Max",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Min",
+              "displayName": "Min",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Max p",
+              "displayName": "Max p",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Min p",
+              "displayName": "Min p",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Moyenne Page",
+              "displayName": "Moyenne Page",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -528,
+        4208
+      ],
+      "id": "b234d25b-b5a0-55eb-a953-b4620124b004",
+      "name": "Audible1"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "N8N",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Autre Stat": "Livre Audio",
+            "Pages": "={{ $('Code in JavaScript9').first().json['Durée écoutée'] ?? 0 }}",
+            "Prix": "={{ $('Code in JavaScript9').first().json.Prix ?? '0,00' }}"
+          },
+          "matchingColumns": [
+            "Autre Stat"
+          ],
+          "schema": [
+            {
+              "id": "Genre",
+              "displayName": "Genre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Liste de souhait",
+              "displayName": "Liste de souhait",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "En possession (Total)",
+              "displayName": "En possession (Total)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "En possession et Lu",
+              "displayName": "En possession et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Non possédé et Lu",
+              "displayName": "Non possédé et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Dédicace",
+              "displayName": "Dédicace",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Autre Stat",
+              "displayName": "Autre Stat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Pages",
+              "displayName": "Pages",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Poids",
+              "displayName": "Poids",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Prix",
+              "displayName": "Prix",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Stat",
+              "displayName": "Stat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Max",
+              "displayName": "Max",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Min",
+              "displayName": "Min",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Max p",
+              "displayName": "Max p",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Min p",
+              "displayName": "Min p",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Moyenne Page",
+              "displayName": "Moyenne Page",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -528,
+        4400
+      ],
+      "id": "b3550401-ade5-54a4-b451-19f92d948b92",
+      "name": "Audible2"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "N8N",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Max p": "={{ $('Code in JavaScript9').first().json.Max ?? 'Aucun' }}",
+            "Min p": "={{ $('Code in JavaScript9').first().json.Min ?? 'Aucun' }}",
+            "Stat": "Livre Audio",
+            "Moyenne Page": "={{ $('Code in JavaScript9').first().json['Moyenne secondes'] ?? 0 }}"
+          },
+          "matchingColumns": [
+            "Stat"
+          ],
+          "schema": [
+            {
+              "id": "Genre",
+              "displayName": "Genre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Liste de souhait",
+              "displayName": "Liste de souhait",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "En possession (Total)",
+              "displayName": "En possession (Total)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "En possession et Lu",
+              "displayName": "En possession et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Non possédé et Lu",
+              "displayName": "Non possédé et Lu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Dédicace",
+              "displayName": "Dédicace",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Autre Stat",
+              "displayName": "Autre Stat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Pages",
+              "displayName": "Pages",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Poids",
+              "displayName": "Poids",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Prix",
+              "displayName": "Prix",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Stat",
+              "displayName": "Stat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Max",
+              "displayName": "Max",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Min",
+              "displayName": "Min",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Max p",
+              "displayName": "Max p",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Min p",
+              "displayName": "Min p",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Moyenne Page",
+              "displayName": "Moyenne Page",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -528,
+        4592
+      ],
+      "id": "fe95867d-7a75-5577-a9ed-e73cb1d5fd4d",
+      "name": "Audible3"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 17
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -6224,
+        2192
+      ],
+      "id": "e26f9701-4e57-56b1-aa2d-68d4e8e6ac98",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        3296
+      ],
+      "id": "6e048152-2f7d-5f51-87d2-7524bb1ec761",
+      "name": "Aggregate5"
+    }
+  ],
+  "connections": {
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "If5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuration Globale": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If5": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Restauration Tunnel1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restauration Tunnel1": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items4": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "Configuration Globale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)2": {
+      "main": [
+        [
+          {
+            "node": "If9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If9": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request Audible API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete row(s)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete row(s)2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript8": {
+      "main": [
+        [
+          {
+            "node": "Upsert row(s)3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert row(s)3": {
+      "main": [
+        [
+          {
+            "node": "Aggregate2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate2": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request Audible API": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate5": {
+      "main": [
+        [
+          {
+            "node": "Audible1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Audible2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Audible3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript9": {
+      "main": [
+        [
+          {
+            "node": "Aggregate5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

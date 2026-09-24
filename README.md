@@ -1,95 +1,59 @@
-# 📚 BiblioBot : Le Bibliothécaire IA Auto-Hébergé
-BiblioBot est un système d'automatisation complet, souverain et 100% auto-hébergé. Il permet d'extraire, synchroniser et interagir en langage naturel avec vos collections de Bandes Dessinées, Mangas, Comics (via Bubble BD) et Romans (via Gleeph).
+# BiblioBot
 
-L'architecture est optimisée pour tourner de manière fluide sur un Raspberry Pi 5 (16 Go RAM), garantissant une confidentialité totale sans aucun coût d'API cloud.
+Collecte et statistiques de livres avec n8n : Bubble BD pour les BD, comics et mangas, Gleeph pour les romans, et un service Audible pour les livres audio. Un workflow Telegram et Ollama interroge les tables de livres.
 
-🚀 Points Forts
-Pipeline ETL Avancé : Extraction et transformation de données complexes depuis des plateformes sans API officielle.
+## Workflows
 
-IA Locale (RAG) : Un agent Qwen 2.5 (ou Llama 3.1) capable de répondre à des questions précises sur votre collection (ex: "Me manque-t-il des tomes de Batman ?").
+| Fichier | Contenu |
+|---|---|
+| [Mise à jour bibliothèque.json](WorkFlow/Mise%20%C3%A0%20jour%20biblioth%C3%A8que.json) | Bubble BD uniquement : collection, souhaits, PAL, statistiques et Google Sheets, 42 nœuds |
+| [Mise à jour romans.json](WorkFlow/Mise%20%C3%A0%20jour%20romans.json) | Gleeph : romans, prix, pages, classements et Google Sheets, 27 nœuds |
+| [Mise à jour Audible.json](WorkFlow/Mise%20%C3%A0%20jour%20Audible.json) | Livres audio, durées, prix estimé et Google Sheets, 22 nœuds |
+| [Conseil Livre.json](WorkFlow/Conseil%20Livre.json) | Assistant tout-en-un Telegram/Ollama, 19 nœuds |
 
-Anti-Bot & Lazy Loading : Utilisation de Browserless pour simuler une navigation humaine et capturer le DOM dynamique (Bypass du Virtual DOM).
+Le nom historique `Mise à jour bibliothèque.json` est conservé pour la branche Bubble BD. Les trois collecteurs sont indépendants : chacun possède le début planifié, la boucle de restauration et ses propres sorties Sheets.
 
-Souveraineté Totale : Aucune donnée ne quitte votre réseau local (hormis la synchronisation optionnelle vers Google Sheets).
+## Nouveautés
 
-✨ Fonctionnalités détaillées
-🕸️ 1. Scraping & Moissonneur HTML
+- Ajout d’Audible : possession, souhaits, livres écoutés, durées totales et écoutées, minimum, maximum et moyenne. Le prix reste une estimation à 9,95 € par livre possédé, comme dans le code fourni.
+- Bubble BD : pages, valeur et poids de collection, bulles lues, genres, auteurs, éditeurs et statistiques des séries.
+- Gleeph : éditeur et année de sortie, répartitions par genres, auteurs, éditeurs et décennies, distinction possession/souhaits et extraction du prix global du site.
+- Retrait des comptages spécifiques Batman, Spider-Man et Star Wars des trois nœuds de statistiques et de leurs mappings Sheets.
+- Suppression de `Recherche de Tomes Manquants.json` et `Statistiques Globales.json` : leurs outils sont intégrés au workflow **Conseil Livre** fourni.
 
-Bubble BD : Récupération automatique des albums possédés, lus, manquants et statistiques (valeur €, poids, nombre de pages).
+## Connexions propres aux services
 
-Gleeph (La Moissonneuse) : Script Puppeteer agressif simulant des interactions physiques (scroll, clics "Voir plus") pour aspirer l'intégralité des catalogues malgré le Lazy Loading.
+**Bubble BD** : dans Configuration Globale, renseigner les quatre URL personnelles et `cookie_bubble`. Les cookies sont des tableaux JSON sérialisés ; `[]` est la valeur vide de publication. Configurer Browserless et le webhook Discord d’alerte.
 
-🧠 2. Agent IA Local (Ollama)
-L'agent utilise les nœuds Advanced AI de n8n pour agir comme un vrai bibliothécaire :
+**Gleeph** : renseigner l’URL `gleeph` et `cookie_gleeph`. La branche **HTTP Request3 → Code in JavaScript21** est conservée car **Gleephe1** dépend de son prix global. Le nœud Sheets partagé **BD3** n’écrit que les colonnes de sa branche ; il ne dépend plus d’un autre collecteur.
 
-Outils de Données : Requête dynamiquement les Data Tables n8n pour vérifier vos stocks.
+**Audible** : **HTTP Request Audible API** appelle `http://host.docker.internal:8010/audible/export`. Adapter cette URL à votre service. Le code de ce service personnalisé n’était pas fourni ; ce dépôt n’inclut donc pas son serveur ni ses fichiers d’authentification. Il doit renvoyer un objet `books` contenant des lignes conformes à `DataTables/Audible.csv`. Le nœud Code refuse un export sans livres. Les champs de cookies hérités du début ne configurent pas automatiquement l’authentification de ce service.
 
-Opérations Mathématiques : Les calculs lourds (comptage total) sont délégués à des sous-workflows pour économiser la fenêtre de contexte du LLM et éviter les hallucinations.
+**Conseil Livre** : reconnecter Telegram et Ollama, sélectionner les tables BD et Roman dans le même projet et disposer du modèle `llama3.2:latest`, repris de l’export. Ce workflow fourni consulte actuellement BD et Roman ; le collecteur Audible est indépendant. L’assistant **Conseil Ultime** couvre aussi les livres audio. Le déclencheur de Conseil Livre reste Telegram, puisqu’une demande utilisateur est nécessaire.
 
-🛡️ 3. Architecture & Sécurité
+## Docker
 
-Configuration Centralisée : Un nœud unique gère les cookies de session et Webhooks pour faciliter la maintenance.
+Le `docker-compose.yml` reprend les réglages de temps d’exécution de la configuration fournie, avec n8n, Browserless et Ollama. Pour une installation neuve, copier `.env.example` vers `.env`, adapter l’URL publique, puis lancer `docker compose up -d`. Avec une instance n8n existante, importer les workflows dans celle-ci. Configurer les credentials Ollama avec l’URL `http://ollama:11434` si ce service est utilisé.
 
-Cookie Guard : Système d'alerte via Discord en cas d'expiration de session ou d'échec d'extraction.
+Le service Audible est une dépendance externe à fournir séparément. Le volume n8n est créé par défaut ; pour réutiliser un volume existant, adapter sa déclaration avant le lancement.
 
-Algorithme de Déduction : Script JS personnalisé pour corriger les erreurs de statut (ex: doublons entre listes "Souhaits" et "Possédés").
+## Démarrage et configuration
 
-🛠️ Stack Technique
-Serveur : Docker / Docker Compose (ARM64/AMD64).
+Chaque extraction planifiée reprend le début d’Ultime : **Schedule Trigger**, **Date & Time**, **Configuration Globale**, **Loop Over Items4**, **HTTP Request1**, **If5**. La branche d’échec conserve **Restauration Tunnel1**, **Wait1** et son retour dans la boucle.
 
-Orchestration : n8n (v2.9.4+).
+1. Importer le JSON dans n8n. L’export reste désactivé tant que la configuration n’est pas terminée.
+2. Remplacer l’URL `https://YOUR_N8N_HOST.example.invalid/` de **HTTP Request1** par celle de votre instance. Le succès est déterminé par un HTTP 200.
+3. Reconnecter les credentials SSH du nœud de restauration et adapter la commande ngrok à votre installation. Sans tunnel, remplacer cette commande par votre propre mécanisme de restauration ou retirer explicitement cette branche.
+4. Adapter l’horaire du planificateur : l’export reprend le vendredi à 17 h. Choisir le fuseau horaire de l’instance ou du workflow.
+5. Remplacer les champs `YOUR_...`, renseigner les cookies privés lorsque nécessaires et sélectionner les credentials des services utilisés.
+6. Créer les tables décrites dans [DataTables](DataTables/README.md), puis les sélectionner dans chaque nœud Data Table. Les CSV sont vides, avec leurs seuls en-têtes.
+7. Pour les sorties Sheets, créer un onglet **N8N** à partir de [GoogleSheets/N8N.csv](GoogleSheets/N8N.csv), sélectionner votre document et vos credentials dans tous les nœuds Sheets. Les intitulés des colonnes et les colonnes de correspondance doivent rester identiques.
+8. Vérifier une exécution complète avant activation. Les branches de collecte peuvent vider et reconstruire leurs tables cibles ; utiliser des tables dédiées.
 
-Navigateur Headless : Browserless (Chromium).
+Les identifiants de documents, tables, dossiers, comptes, cookies, tokens, données épinglées et historiques d’exécution personnels ont été retirés. Les identifiants internes des nœuds ont été régénérés. Les workflows séparés et le workflow complet sont des alternatives : éviter de lancer simultanément plusieurs versions qui reconstruisent les mêmes tables ou contrôlent le même tunnel.
 
-Modèle LLM : Ollama (qwen2.5:7b recommandé pour les appels d'outils, ou llama3.1:latest).
+## Vérification
 
-Stockage : n8n Data Tables & Google Sheets.
+Le JSON, les connexions, les références entre nœuds, la syntaxe JavaScript, les expressions complètes et les entrées des nœuds Merge ont été contrôlés localement. Aucun service personnel ni workflow de production n’a été exécuté. Les credentials et l’intégration réelle doivent être vérifiés dans l’instance cible.
 
-⚙️ Installation & Déploiement
-1. Lancer l'infrastructure
-Clonez le dépôt et lancez les conteneurs :
-
-```Bash
-docker compose up -d
-```
-2. Configurer l'IA (Ollama)
-Assurez-vous qu'Ollama est installé sur l'hôte et téléchargez le modèle :
-
-```Bash
-ollama run qwen2.5:7b
-```
-Note : Le fichier docker-compose.yml utilise host.docker.internal pour lier n8n à Ollama.
-
-3. Importer les Workflows (Ordre strict)
-Ouvrez n8n (http://localhost:5678).
-
-Importez Mise à jour bibliothèque.json (L'Usine à Données).
-
-Importez Recherche de Tomes Manquants.json (Outil IA n°1).
-
-Importez Statistiques Globales.json (Outil IA n°2).
-
-Importez Conseil Livre.json (Le Cerveau IA).
-
-⚠️ Étape Cruciale : Reconnecter les outils IA
-Dans le workflow Conseil Livre, double-cliquez sur les deux nœuds "Call Workflow" et re-sélectionnez manuellement les sous-workflows Recherche de Tomes Manquants et Statistiques Globales dans la liste déroulante pour restaurer les ID.
-Pour l'outil de Recherche : Assurez-vous que le paramètre d'entrée est défini sur Auto-Map Input Data (ou mappé manuellement avec ={{ $json.titre }}).
-
-4. Configuration des identifiants
-
-Cookies de session : Dans le nœud Configuration Globale du workflow principal, renseignez vos cookies Bubble/Gleeph sous forme de texte brut (String), copiés depuis votre navigateur.
-
-Discord (Optionnel) : Renseignez votre Webhook Discord pour les alertes.
-
-Ngrok (Optionnel) : Le workflow inclut des nœuds SSH pour gérer un tunnel ngrok. Si vous n'exposez pas votre instance, vous pouvez supprimer ces nœuds.
-
-5. Liaison Google Sheets (Optionnel)
-Pour chaque nœud Google Sheets présent dans le workflow :
-
-Créez vos identifiants OAuth2 dans n8n.
-
-Remplacez VOTRE_ID_GOOGLE_SHEET_ICI par l'ID réel de votre tableur.
-
-Sélectionnez les onglets correspondants (BD, Manga, etc.).
-
-Créé avec ❤️ pour les collectionneurs et les passionnés d'auto-hébergement.
+Les six comparaisons de régression (tables complètes fournies et entrées vides pour BD, Roman et Audible) confirment que le retrait des compteurs par univers conserve les autres sorties des trois nœuds de statistiques.
