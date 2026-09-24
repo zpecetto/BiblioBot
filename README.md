@@ -2,6 +2,14 @@
 
 Collecte et statistiques de livres avec n8n : Bubble BD pour les BD, comics et mangas, Gleeph pour les romans, et un service Audible pour les livres audio. Un workflow Telegram et Ollama interroge les tables de livres.
 
+## Sites concernés
+
+| Livres | Site source | Collecteur |
+|---|---|---|
+| BD, comics et mangas | [Bubble BD — bubblebd.com](https://www.bubblebd.com/) | Mise à jour bibliothèque |
+| Romans | [Gleeph — gleeph.com](https://www.gleeph.com/) | Mise à jour romans |
+| Livres audio | [Audible France — audible.fr](https://www.audible.fr/) | Mise à jour Audible, via votre service personnalisé `audible-api` |
+
 ## Workflows
 
 | Fichier | Contenu |
